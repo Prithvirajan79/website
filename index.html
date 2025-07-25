@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>My school</title>
+  <title>3D RPG Game with Photos</title>
   <style>
     body { margin: 0; overflow: hidden; }
-    canvas { display: block; }
     #joystick-container {
       position: absolute;
-      bottom: 30px;
-      right: 30px;
+      bottom: 20px;
+      right: 20px;
       width: 120px;
       height: 120px;
       z-index: 10;
@@ -24,46 +23,79 @@
   <script src="https://cdn.jsdelivr.net/npm/nipplejs@0.9.0/dist/nipplejs.min.js"></script>
 
   <script>
-    let scene, camera, renderer, character;
-    let moveDirection = new THREE.Vector2(0, 0);
-    const speed = 0.1;
+    let scene, camera, renderer, fox, joystick;
+    const keys = {};
+    let moveForward = false, moveBackward = false, rotateLeft = false, rotateRight = false;
 
     init();
     animate();
 
     function init() {
       scene = new THREE.Scene();
-      scene.background = new THREE.Color(0xa0d0ff);
+      scene.background = new THREE.Color(0x87ceeb);
 
-      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
       camera.position.set(0, 5, -10);
 
       renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444));
-      const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-      dirLight.position.set(10, 20, 10);
-      scene.add(dirLight);
+      // Lights
+      const light = new THREE.DirectionalLight(0xffffff, 1);
+      light.position.set(10, 20, 10);
+      scene.add(light);
+      scene.add(new THREE.AmbientLight(0xffffff, 0.4));
 
+      // Ground
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(500, 500),
-        new THREE.MeshLambertMaterial({ color: 0x228822 })
+        new THREE.MeshLambertMaterial({ color: 0x228B22 })
       );
       ground.rotation.x = -Math.PI / 2;
       scene.add(ground);
 
+      // Load Fox
       const loader = new THREE.GLTFLoader();
       loader.load('https://rawcdn.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF/Fox.gltf', gltf => {
-        character = gltf.scene;
-        character.scale.set(0.05, 0.05, 0.05);
-        character.position.set(0, 0, 0);
-        character.rotation.y = Math.PI;
-        scene.add(character);
+        fox = gltf.scene;
+        fox.scale.set(0.05, 0.05, 0.05);
+        scene.add(fox);
       });
 
-      const joystick = nipplejs.create({
+// Add photo boards in a grid layout
+const imageUrls = [
+  'https://plus.unsplash.com/premium_photo-1751523623391-a0e0e33ec443?q=80&w=448&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D','https://plus.unsplash.com/premium_photo-1751523623391-a0e0e33ec443?q=80&w=448&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D','https://plus.unsplash.com/premium_photo-1751523623391-a0e0e33ec443?q=80&w=448&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D','https://plus.unsplash.com/premium_photo-1751523623391-a0e0e33ec443?q=80&w=448&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D','https://plus.unsplash.com/premium_photo-1751523623391-a0e0e33ec443?q=80&w=448&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D','https://plus.unsplash.com/premium_photo-1751523623391-a0e0e33ec443?q=80&w=448&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  
+];
+
+const textureLoader = new THREE.TextureLoader();
+const gridSize = 3; // 5 x 3 = 15 images
+const spacing = 20;
+
+let index = 0;
+for (let x = -2; x <= 2; x++) {
+  for (let z = -1; z <= 1; z++) {
+    const imgUrl = imageUrls[index % imageUrls.length];
+    textureLoader.load(imgUrl, texture => {
+      const mat = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+      const geo = new THREE.PlaneGeometry(15, 20);
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x * spacing, 2, z * spacing);
+      mesh.rotation.y = 0;
+      scene.add(mesh);
+    });
+    index++;
+  }
+}
+
+
+      // Keyboard
+      document.addEventListener('keydown', e => keys[e.code] = true);
+      document.addEventListener('keyup', e => keys[e.code] = false);
+
+      // Joystick
+      joystick = nipplejs.create({
         zone: document.getElementById('joystick-container'),
         mode: 'static',
         position: { left: '60px', bottom: '60px' },
@@ -71,12 +103,19 @@
       });
 
       joystick.on('move', (evt, data) => {
-        const angle = data.angle.radian;
-        moveDirection.set(Math.sin(angle), -Math.cos(angle)).normalize();
+        if (data.direction) {
+          moveForward = data.direction.angle === 'up';
+          moveBackward = data.direction.angle === 'down';
+          rotateLeft = data.direction.angle === 'left';
+          rotateRight = data.direction.angle === 'right';
+        }
       });
 
-      joystick.on('end', () => moveDirection.set(0, 0));
+      joystick.on('end', () => {
+        moveForward = moveBackward = rotateLeft = rotateRight = false;
+      });
 
+      // Resize
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -86,22 +125,27 @@
 
     function animate() {
       requestAnimationFrame(animate);
-      if (character) {
-        // Move character
-        character.position.x += moveDirection.x * speed;
-        character.position.z += moveDirection.y * speed;
 
-        // Rotate character toward direction
-        if (moveDirection.length() > 0) {
-          const angle = Math.atan2(moveDirection.x, moveDirection.y);
-          character.rotation.y = angle;
-        }
+      if (fox) {
+        const direction = new THREE.Vector3();
+        const forward = new THREE.Vector3();
+        fox.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
 
-        // Smooth camera follow
-        const offset = new THREE.Vector3(0, 5, -10);
-        const targetPos = character.position.clone().add(offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y));
-        camera.position.lerp(targetPos, 0.1);
-        camera.lookAt(character.position);
+        direction.set(0, 0, 0);
+
+        if (keys['KeyW'] || moveForward) direction.add(forward);
+        if (keys['KeyS'] || moveBackward) direction.sub(forward);
+        if (keys['KeyA'] || rotateLeft) fox.rotation.y += 0.05;
+        if (keys['KeyD'] || rotateRight) fox.rotation.y -= 0.05;
+
+        fox.position.add(direction.multiplyScalar(0.1));
+
+        // Camera follows
+        const camOffset = new THREE.Vector3(0, 5, -10).applyQuaternion(fox.quaternion);
+        camera.position.copy(fox.position.clone().add(camOffset));
+        camera.lookAt(fox.position);
       }
 
       renderer.render(scene, camera);
