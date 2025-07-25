@@ -25,7 +25,8 @@
 
   <script>
     let scene, camera, renderer, character;
-    let moveX = 0, moveZ = 0;
+    let moveDirection = new THREE.Vector2(0, 0);
+    const speed = 0.1;
 
     init();
     animate();
@@ -41,13 +42,11 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      
       scene.add(new THREE.HemisphereLight(0xffffff, 0x444444));
       const dirLight = new THREE.DirectionalLight(0xffffff, 1);
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
-      
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(500, 500),
         new THREE.MeshLambertMaterial({ color: 0x228822 })
@@ -55,7 +54,6 @@
       ground.rotation.x = -Math.PI / 2;
       scene.add(ground);
 
-      // Load character
       const loader = new THREE.GLTFLoader();
       loader.load('https://rawcdn.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF/Fox.gltf', gltf => {
         character = gltf.scene;
@@ -65,7 +63,6 @@
         scene.add(character);
       });
 
-      // Joystick
       const joystick = nipplejs.create({
         zone: document.getElementById('joystick-container'),
         mode: 'static',
@@ -74,16 +71,11 @@
       });
 
       joystick.on('move', (evt, data) => {
-        const angle = data.angle.degree;
-        const distance = data.distance / 50;
-        moveX = Math.sin(angle * Math.PI / 180) * distance;
-        moveZ = Math.cos(angle * Math.PI / 180) * distance * -1;
+        const angle = data.angle.radian;
+        moveDirection.set(Math.sin(angle), -Math.cos(angle)).normalize();
       });
 
-      joystick.on('end', () => {
-        moveX = 0;
-        moveZ = 0;
-      });
+      joystick.on('end', () => moveDirection.set(0, 0));
 
       window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
@@ -95,22 +87,23 @@
     function animate() {
       requestAnimationFrame(animate);
       if (character) {
-        character.position.x += moveX;
-        character.position.z += moveZ;
+        // Move character
+        character.position.x += moveDirection.x * speed;
+        character.position.z += moveDirection.y * speed;
 
-      
-        if (moveX !== 0 || moveZ !== 0) {
-          const angle = Math.atan2(moveX, moveZ);
+        // Rotate character toward direction
+        if (moveDirection.length() > 0) {
+          const angle = Math.atan2(moveDirection.x, moveDirection.y);
           character.rotation.y = angle;
         }
 
-        // Camera follows character
-        camera.position.lerp(
-          new THREE.Vector3(character.position.x, character.position.y + 5, character.position.z - 10),
-          0.1
-        );
+        // Smooth camera follow
+        const offset = new THREE.Vector3(0, 5, -10);
+        const targetPos = character.position.clone().add(offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), character.rotation.y));
+        camera.position.lerp(targetPos, 0.1);
         camera.lookAt(character.position);
       }
+
       renderer.render(scene, camera);
     }
   </script>
