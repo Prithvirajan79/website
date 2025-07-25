@@ -2,14 +2,14 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Free Fire World - Three.js</title>
+  <title>My school</title>
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
     #joystick-container {
       position: absolute;
       bottom: 30px;
-      left: 30px;
+      right: 30px;
       width: 120px;
       height: 120px;
       z-index: 10;
@@ -41,13 +41,13 @@
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      // Lighting
+      
       scene.add(new THREE.HemisphereLight(0xffffff, 0x444444));
       const dirLight = new THREE.DirectionalLight(0xffffff, 1);
       dirLight.position.set(10, 20, 10);
       scene.add(dirLight);
 
-      // Ground
+      
       const ground = new THREE.Mesh(
         new THREE.PlaneGeometry(500, 500),
         new THREE.MeshLambertMaterial({ color: 0x228822 })
@@ -98,7 +98,7 @@
         character.position.x += moveX;
         character.position.z += moveZ;
 
-        // Rotate character in movement direction
+      
         if (moveX !== 0 || moveZ !== 0) {
           const angle = Math.atan2(moveX, moveZ);
           character.rotation.y = angle;
